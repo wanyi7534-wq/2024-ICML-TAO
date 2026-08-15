@@ -1,59 +1,122 @@
-## Test-Time Degradation Adaptation for Open-Set Image Restoration (ICML 2024, Spotlight)
+# Test-Time Degradation Adaptation for Open-Set Image Restoration
 
-This work studied a challenging problem of Open-set Image Restoration (OIR), and revealed its essence from the perspective of distribution shift. In recent, test-time adaptation has emerged as an effective methodology to address this inherent disparity. As a consequence, this work presented a test-time degradation adaptation framework for addressing OIR.
+> **Attribution and scope.** TAO is the work of **Yuanbiao Gou, Haiyu Zhao, Boyun Li, Xinyan Xiao, and Xi Peng**, published as an ICML 2024 Spotlight paper. The method and original implementation are not the work of this reproduction study. See the [original TAO repository](https://github.com/YBGou/2024-ICML-TAO) and cite the original paper below. This working tree adds an independent dehazing reproduction and empirical audit on top of the upstream project.
 
-#### Environments
+## Reproduction Study
 
-The code is tested with Pytorch 2.0.1 and CUDA 11.7 on Ubuntu 20.04. Run the following command to install dependencies:
+This repository extension reproduces the **HSTS image dehazing** task and documents both the successful execution of the public pipeline and the remaining gap to the author-provided outputs.
 
-    pip install -r requirements.txt
+- **Environment:** Windows, Python 3.10, PyTorch 2.7.1+cu128, NVIDIA GeForce RTX 5060 Laptop GPU
+- **Evaluation set:** 10 processed HSTS images at 256×256
+- **Detailed record:** [TAO Dehazing Reproduction](REPRODUCTION.md)
 
-#### Pretrained Model and Datasets
+| Evaluated images | PSNR (dB) | SSIM |
+|---|---:|---:|
+| Hazy Input | 14.7446 | 0.753592 |
+| Author-provided TAO | 22.3276 | 0.856213 |
+| Our Reproduction | 18.7119 | 0.797267 |
 
-Please download the pretrained unconditional DDPM on ImageNet-256 (i.e., 256x256_diffusion_uncond.pt) from [this page](https://github.com/openai/guided-diffusion) and put it in folder `test_models`. This work adopts an unconditional pre-trained DDPM as foundation model for OIR due to the following considerations. First, it captures rich knowledges of generating various high-quality visual scenarios, which could be regarded as a generic pretraining for OIR targeting at producing clean images. Second, it is degradation-agnostic and any degradations in the test data could be considered as unforeseen.
+These values use the same custom **RGB PSNR/SSIM evaluator** for all three groups, making them suitable for an internally consistent comparison. They must not be presented as identical to the paper's official SSIM protocol; the official IQA implementation is not available in the current working tree.
 
-This work adopts the synthetic dataset of HSTS from [RESIDE](https://sites.google.com/view/reside-dehaze-datasets/reside-standard?authuser=3D0) for image dehazing. The testing pairs from [LOL](https://daooshee.github.io/BMVC2018website/) are employed for low-light image enhancement. [Kodak24](https://github.com/MohamedBakrAli/Kodak-Lossless-True-Color-Image-Suite/tree/master) dataset is used for image denoising by adding the Gaussian noises with the noise level of $\sigma=30$ to clean images. Since the DDPM is pre-trained on the images of size $256\times 256$, we preprocess the images in the datasets by first center cropping them along the shorter edges, and then resizing them to match the image size.
+The complete report covers the [pipeline, per-image metrics, reproduction gap, controlled Fresh B experiment, byte-level reproducibility audit, and limitations](REPRODUCTION.md).
 
-We have provided the processed data and the method's results in folder `test_samples`.
+![HSTS dehazing comparison: Hazy Input, Our TAO, Author TAO, and Ground Truth](reproduction_assets/tao_dehazing_comparison_4x4.png)
 
-#### TTA for OIR tasks
+## Reproduction Artifacts
 
-To explore the upper bound of the method on each type of degradation, the loss weights $\lambda_{1-3}$, $\gamma_{1-5}$ and guidance scale $s$ (Line 123-125, 160-172, 229 in `sample_xxx.py` files, respectively) are adjusted for different types of degradation. Specifically, several representative images of target degradation are selected first, and then used to adjust the parameters according to their quantitative or qualitative results. Finally, the obtained parameters are applied to all images of the target degradation. Here, the parameters for the degradations presented in the paper are provided.
+- [`REPRODUCTION.md`](REPRODUCTION.md) — full experimental record and limitations
+- [`evaluate_reproduction.py`](evaluate_reproduction.py) — unified RGB PSNR/SSIM evaluator
+- [`reproduction_metrics.csv`](reproduction_metrics.csv) — per-image quantitative results
+- [`reproduction_assets/`](reproduction_assets/) — comparison figure and reproducible figure-generation script
+- [`results_batch_ours/`](results_batch_ours/) — 10-image reproduction outputs
 
-Single Image Dehazing
+## Important Reproducibility Note
 
-    python sample_dehazing.py --sample_dir input_image_folder --result_dir output_image_folder
+At the audited state, the public `origin/main` records `gen_dif_pri` as a Git gitlink (`160000`, object `b34494cd53e344a5c726e502f552cd7fb888aad0`) but provides no `.gitmodules` entry. A fresh clone therefore cannot initialize this path through the normal Git submodule workflow.
 
-Low-light Image Enhancement
+For this reproduction, the complete `gen_dif_pri/` source tree was restored from the official repository history at commit [`9de6173479f1d76f81f003c70c6dbe6f7786ac8b`](https://github.com/YBGou/2024-ICML-TAO/commit/9de6173479f1d76f81f003c70c6dbe6f7786ac8b). This restored code belongs to the original TAO authors/upstream project; it is required infrastructure, not original code contributed by the reproduction study.
 
-    python sample_lowlightE.py --sample_dir input_image_folder --result_dir output_image_folder
+---
 
-Single Image Denoising (Gaussian noises $\sigma=30$)
+## Original TAO Project and Usage
 
-    python sample_denoising.py --sample_dir input_image_folder --result_dir output_image_folder
+The remainder of this page preserves the essential upstream description and usage information.
 
-In addition, this repo provides a bash script for Ubuntu system to concurrently process multiple image folders through multiple GPUs. Remove the corresponding comments before running the script to handle the degradations. All experimental results in the paper are obtained through this script.
+### About TAO
 
-    bash tta_scripts.sh
+The original work studies Open-Set Image Restoration (OIR) as a distribution-shift problem and proposes a test-time degradation adaptation framework for addressing unseen degradations.
 
-To assess the performance, the metrics of PSNR and SSIM are employed which are calculated through
-    
-    python img_qua_ass/inference_iqa.py -m PSNR -i result_image_foler -r ground_truths_folder
+### Upstream Environment
 
-    python img_qua_ass/inference_iqa.py -m SSIM -i result_image_foler -r ground_truths_folder
+The authors report testing the code with **PyTorch 2.0.1**, **CUDA 11.7**, and **Ubuntu 20.04**:
 
-#### Citation
+```bash
+pip install -r requirements.txt
+```
 
-If this codebase is useful for your works, please cite the following paper:
+### Pretrained Model and Datasets
 
-    @inproceedings{gou2024tao,
-        title={Test-Time Degradation Adaptation for Open-Set Image Restoration},
-        author={Yuanbiao Gou and Haiyu Zhao and Boyun Li and Xinyan Xiao and Xi Peng},
-        booktitle={Forty-first International Conference on Machine Learning},
-        month={Jul.},
-        year={2024}
-    }
+Download the pretrained unconditional ImageNet-256 DDPM, `256x256_diffusion_uncond.pt`, from [OpenAI guided-diffusion](https://github.com/openai/guided-diffusion) and place it in `test_models/`. Model checkpoints are intentionally excluded from this Git repository.
 
-#### Acknowledgement
+The upstream project uses:
 
-This repo is built upon the open-source repo of [GD](https://github.com/openai/guided-diffusion), [GDP](https://github.com/Fayeben/GenerativeDiffusionPrior) and [IQA-PyTorch](https://github.com/chaofengc/IQA-PyTorch), thanks for their excellent works.
+- the synthetic HSTS dataset from [RESIDE](https://sites.google.com/view/reside-dehaze-datasets/reside-standard?authuser=3D0) for image dehazing;
+- test pairs from [LOL](https://daooshee.github.io/BMVC2018website/) for low-light enhancement; and
+- [Kodak24](https://github.com/MohamedBakrAli/Kodak-Lossless-True-Color-Image-Suite/tree/master) with Gaussian noise at $\sigma=30$ for denoising.
+
+Because the DDPM operates at 256×256, the upstream README states that dataset images are center-cropped along the shorter edge and resized. Processed samples and author-provided results are under `test_samples/`.
+
+### TTA for OIR Tasks
+
+The upstream README explains that the loss weights $\lambda_{1-3}$, $\gamma_{1-5}$ and guidance scale $s$ are adjusted per degradation type using representative images, then applied to all images with that degradation. Parameters for the degradations reported in the paper are provided in the task scripts.
+
+Single Image Dehazing:
+
+```bash
+python sample_dehazing.py --sample_dir input_image_folder --result_dir output_image_folder
+```
+
+Low-light Image Enhancement:
+
+```bash
+python sample_lowlightE.py --sample_dir input_image_folder --result_dir output_image_folder
+```
+
+Single Image Denoising (Gaussian noise, $\sigma=30$):
+
+```bash
+python sample_denoising.py --sample_dir input_image_folder --result_dir output_image_folder
+```
+
+The upstream Ubuntu script runs multiple input folders concurrently across GPUs. Its task blocks are commented by default and must be enabled before use:
+
+```bash
+bash tta_scripts.sh
+```
+
+The original README specifies the following IQA commands:
+
+```bash
+python img_qua_ass/inference_iqa.py -m PSNR -i result_image_folder -r ground_truths_folder
+python img_qua_ass/inference_iqa.py -m SSIM -i result_image_folder -r ground_truths_folder
+```
+
+In the audited working tree, `img_qua_ass/` is empty; see [the reproduction limitations](REPRODUCTION.md#12-limitations) for the evaluation protocol used in this study.
+
+## Citation
+
+If you use TAO or its original code, cite the authors' paper:
+
+```bibtex
+@inproceedings{gou2024tao,
+    title={Test-Time Degradation Adaptation for Open-Set Image Restoration},
+    author={Yuanbiao Gou and Haiyu Zhao and Boyun Li and Xinyan Xiao and Xi Peng},
+    booktitle={Forty-first International Conference on Machine Learning},
+    month={Jul.},
+    year={2024}
+}
+```
+
+## Acknowledgement
+
+The original TAO repository is built upon [guided-diffusion (GD)](https://github.com/openai/guided-diffusion), [GenerativeDiffusionPrior (GDP)](https://github.com/Fayeben/GenerativeDiffusionPrior), and [IQA-PyTorch](https://github.com/chaofengc/IQA-PyTorch). Credit for TAO and its upstream implementation remains with the original authors.

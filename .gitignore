@@ -6,6 +6,20 @@ __pycache__/
 # C extensions
 *.so
 
+# Local pretrained models and checkpoints
+test_models/
+*.pt
+*.pth
+*.ckpt
+
+# Reproduction scratch outputs (not part of the public study artifacts)
+results_single/
+test_samples/HSTS_single_input/
+
+# Operating-system metadata
+Thumbs.db
+.DS_Store
+
 # Distribution / packaging
 .Python
 build/
