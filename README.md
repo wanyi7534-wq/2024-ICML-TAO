@@ -29,6 +29,11 @@ The complete report covers the [pipeline, per-image metrics, reproduction gap, c
 - [`reproduction_metrics.csv`](reproduction_metrics.csv) — per-image quantitative results
 - [`reproduction_assets/`](reproduction_assets/) — comparison figure and reproducible figure-generation script
 - [`results_batch_ours/`](results_batch_ours/) — 10-image reproduction outputs
+- [`EXPERIMENT_LOG.md`](EXPERIMENT_LOG.md) — verified retrospective experiment ledger
+- [`REPRODUCIBILITY_MANIFEST.md`](REPRODUCIBILITY_MANIFEST.md) — environment, checkpoint, data, and provenance manifest
+- [`reproduction_checksums.sha256`](reproduction_checksums.sha256) — SHA-256 integrity manifest for tracked reproduction artifacts
+
+Raw terminal stdout from the initial experiments was not completely captured; `EXPERIMENT_LOG.md` is a verified retrospective experiment ledger rather than a fabricated console log.
 
 ## Important Reproducibility Note
 
